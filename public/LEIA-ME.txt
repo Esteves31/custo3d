@@ -1,0 +1,67 @@
+CUSTO3D - calculadora de preço para peças impressas em 3D
+
+COMO USAR
+
+1. Dê dois cliques no arquivo custo3d.html. Ele precisa abrir no Chrome ou no Edge.
+   Se abrir em outro programa: clique com o botão direito no arquivo,
+   escolha "Abrir com" e depois "Google Chrome" ou "Microsoft Edge".
+
+2. O Custo3D abre na aba "Resumo". Clique em "Calculadora", no alto da
+   janela. Em "Seus valores", digite o preço do kg do filamento, o preço da
+   sacolinha, o preço da hora de impressão, o preço da argola de chaveiro
+   e a % de lucro. Esses valores ficam salvos para a próxima vez.
+
+3. No Bambu Studio, depois de fatiar, use
+   Arquivo > Exportar > Exportar arquivo fatiado da placa
+   e salve o arquivo .gcode.3mf onde preferir.
+   (Bambu Studio em inglês: File > Export > Export plate sliced file.)
+   Projeto com várias placas: use "Exportar todas as placas fatiadas".
+
+   ATENÇÃO: o arquivo de projeto (.3mf, o do "Salvar projeto") não serve.
+   Ele não guarda o peso nem o tempo, mesmo depois de fatiar.
+   Use sempre o arquivo exportado, que termina em .gcode.3mf.
+
+4. Arraste esse arquivo para a janela do Custo3D (ou clique em "Abrir arquivo").
+
+5. Se a placa tiver mais de uma peça, informe em "Peças nesta placa".
+   Se a peça for chaveiro, marque "Leva argola de chaveiro". Essa caixa
+   se desmarca sozinha quando você abre outro arquivo.
+
+6. Clique em "Copiar preço" e cole o valor onde quiser.
+
+7. Para guardar a cotação, clique em "Salvar no histórico". A aba
+   "Histórico", no alto da janela, mostra as últimas cotações. Lá dá para
+   buscar pelo nome do arquivo, excluir e usar "Exportar CSV" para abrir
+   no Excel.
+
+8. Quando uma cotação virar venda, clique em "Vendido" na linha dela, no
+   Histórico. Ela vai para a aba "Itens vendidos". Lá você marca "Pago"
+   quando receber, filtra pela data da venda, mostra só as vendas
+   "A receber" ou só as "Pagas" e vê o total vendido, o que já recebeu
+   e o que ainda falta receber.
+
+9. A aba "Resumo" mostra quanto você vendeu e lucrou no mês, um gráfico
+   de vendas e lucro dos últimos 6 meses, quanto ainda falta receber
+   (o botão "Ver quais" mostra essas vendas) e as últimas vendas.
+   Passe o mouse sobre um mês do gráfico para ver os valores.
+
+10. FAÇA BACKUP. No fim da aba "Resumo", clique em "Fazer backup".
+    O navegador salva um arquivo custo3d-backup-AAAA-MM-DD.json na
+    pasta Downloads. Guarde uma cópia fora do computador (pendrive,
+    e-mail para você mesmo ou Google Drive). Faça de novo de vez em
+    quando: o Resumo avisa quando o último backup estiver velho.
+
+    Para recuperar: clique em "Restaurar backup" e escolha o arquivo.
+    Nada do que já está no Custo3D é apagado; o backup só traz de volta
+    o que estiver faltando.
+
+BOM SABER
+
+- Funciona sem internet. Nenhum arquivo sai do seu computador.
+- Os valores, o histórico e os itens vendidos ficam salvos neste
+  navegador. Se você limpar os dados de navegação marcando "Cookies e
+  outros dados do site", tudo isso é apagado. Só o backup recupera.
+- Para usar em outro navegador ou outro computador, faça um backup
+  aqui e use "Restaurar backup" lá.
+- O Windows costuma esconder o final do nome: o arquivo exportado
+  pode aparecer como "nome.gcode" em vez de "nome.gcode.3mf". É ele mesmo.

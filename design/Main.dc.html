@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Custo3D — Calculadora</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A3412}a:hover{color:#7C2D12}
+input:focus{outline:2px solid #C2410C;outline-offset:1px}
+</style>
+</helmet>
+<div style="min-height: 900px; background: #EEF1F4; color: #15191E; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 15px; box-sizing: border-box">
+
+<header style="background: #15191E; color: #F4F5F7; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 32px">
+<div style="display: flex; align-items: center; gap: 12px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7z"></path><path d="M3 7l9 5 9-5"></path><path d="M12 12v10"></path></svg>
+<span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.01em">Custo3D</span>
+</div>
+<nav aria-label="Principal" style="display: flex; flex-wrap: wrap; gap: 4px">
+<a href="Main.dc.html" style="color: #FFFFFF; background: #2A3038; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 500">Calculadora</a>
+<a href="#historico" style="color: #C9CED6; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 500">Histórico</a>
+<a href="Configuracoes.dc.html" style="color: #C9CED6; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 500">Configurações</a>
+</nav>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #C9CED6">
+<span style="width: 8px; height: 8px; border-radius: 50%; background: #4ADE80; display: inline-block" aria-hidden="true"></span>
+<span>Monitorando a pasta de fatiados</span>
+</div>
+</header>
+
+<main style="max-width: 1200px; margin: 0 auto; padding: 32px; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+<section aria-labelledby="proj-title" style="flex: 1 1 420px; min-width: 0; background: #FFFFFF; border: 1px solid #D5DAE0; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap">
+<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4B5563">Projeto detectado</span>
+<h1 id="proj-title" style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: anywhere">suporte_fone_v2.gcode.3mf</h1>
+<span style="font-size: 13px; color: #4B5563">Capturado do Bambu Studio há 12 segundos</span>
+</div>
+<span style="background: #DCFCE7; color: #14532D; font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 999px">Fatiado</span>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 13px; font-weight: 600; color: #374151">Placa</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{plates}}" as="p" hint-placeholder-count="2">
+<button type="button" onClick="{{p.pick}}" style="{{p.chipStyle}}">{{p.name}}</button>
+</sc-for>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<div style="background: #F6F7F9; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; color: #4B5563">Filamento usado</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 600">{{gramsLabel}}</span>
+</div>
+<div style="background: #F6F7F9; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; color: #4B5563">Tempo de impressão</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 600">{{plate.t}}</span>
+</div>
+<div style="background: #F6F7F9; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; color: #4B5563">Material</span>
+<span style="font-size: 18px; font-weight: 600">{{plate.mat}}</span>
+</div>
+<div style="background: #F6F7F9; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; color: #4B5563">Cor</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 600"><span style="width: 18px; height: 18px; border-radius: 50%; border: 1px solid #9CA3AF; background: {{plate.color}}" aria-hidden="true"></span>{{plate.colorName}}</span>
+</div>
+</div>
+
+<div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #4B5563; border-top: 1px solid #E5E7EB; padding-top: 16px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+<span>Documentos › Impressões 3D › Fatiados</span>
+</div>
+</section>
+
+<div style="flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+
+<section aria-labelledby="vals-title" style="background: #FFFFFF; border: 1px solid #D5DAE0; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<h2 id="vals-title" style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700">Seus valores</h2>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="kg" style="font-size: 13px; font-weight: 600; color: #374151">Filamento (R$ por kg)</label>
+<input id="kg" type="text" value="{{kg}}" onChange="{{onKg}}" style="height: 48px; box-sizing: border-box; border: 1px solid #B8BFC8; border-radius: 8px; padding: 0 14px; font-family: 'IBM Plex Mono', monospace; font-size: 17px; color: #15191E; background: #FFFFFF">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="bag" style="font-size: 13px; font-weight: 600; color: #374151">Sacolinha (R$ por unidade)</label>
+<input id="bag" type="text" value="{{bag}}" onChange="{{onBag}}" style="height: 48px; box-sizing: border-box; border: 1px solid #B8BFC8; border-radius: 8px; padding: 0 14px; font-family: 'IBM Plex Mono', monospace; font-size: 17px; color: #15191E; background: #FFFFFF">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="margin" style="font-size: 13px; font-weight: 600; color: #374151">Lucro sobre o custo (%)</label>
+<input id="margin" type="text" value="{{margin}}" onChange="{{onMargin}}" style="height: 48px; box-sizing: border-box; border: 1px solid #B8BFC8; border-radius: 8px; padding: 0 14px; font-family: 'IBM Plex Mono', monospace; font-size: 17px; color: #15191E; background: #FFFFFF">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="qty" style="font-size: 13px; font-weight: 600; color: #374151">Peças nesta placa</label>
+<input id="qty" type="text" value="{{qty}}" onChange="{{onQty}}" style="height: 48px; box-sizing: border-box; border: 1px solid #B8BFC8; border-radius: 8px; padding: 0 14px; font-family: 'IBM Plex Mono', monospace; font-size: 17px; color: #15191E; background: #FFFFFF">
+</div>
+</div>
+<span style="font-size: 13px; color: #4B5563">Os valores ficam salvos e já vêm preenchidos no próximo projeto.</span>
+</section>
+
+<section aria-labelledby="res-title" style="background: #15191E; color: #F4F5F7; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<h2 id="res-title" style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700">Por peça</h2>
+<div style="display: flex; flex-direction: column; gap: 10px; font-size: 15px">
+<div style="display: flex; justify-content: space-between; gap: 12px"><span style="color: #C9CED6">Filamento ({{gramsPerLabel}})</span><span style="font-family: 'IBM Plex Mono', monospace">{{filCost}}</span></div>
+<div style="display: flex; justify-content: space-between; gap: 12px"><span style="color: #C9CED6">Sacolinha</span><span style="font-family: 'IBM Plex Mono', monospace">{{bagCost}}</span></div>
+<div style="display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #39404A; padding-top: 10px"><span style="color: #C9CED6">Custo total</span><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{totalCost}}</span></div>
+<div style="display: flex; justify-content: space-between; gap: 12px"><span style="color: #C9CED6">Lucro ({{marginLabel}})</span><span style="font-family: 'IBM Plex Mono', monospace; color: #86EFAC">+ {{profit}}</span></div>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; border-top: 1px solid #39404A; padding-top: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #FDBA74">Preço de venda</span>
+<span style="font-family: 'Space Grotesk', sans-serif; font-size: 52px; font-weight: 700; line-height: 1; letter-spacing: -0.02em">{{price}}</span>
+</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 8px; border: 1px solid #5B636E; background: transparent; color: #F4F5F7; font: 600 15px 'IBM Plex Sans', sans-serif; cursor: pointer">Copiar preço</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 8px; border: 0; background: #C2410C; color: #FFFFFF; font: 600 15px 'IBM Plex Sans', sans-serif; cursor: pointer">Salvar no histórico</button>
+</div>
+</div>
+</section>
+
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { plate: 0, kg: '120,00', bag: '0,35', margin: '150', qty: '1' };
+  }
+  num(v) {
+    var n = parseFloat(String(v).replace(/\./g, '').replace(',', '.'));
+    if (String(v).indexOf(',') === -1) n = parseFloat(String(v));
+    return isNaN(n) ? 0 : n;
+  }
+  brl(n) {
+    return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+  renderVals() {
+    var self = this;
+    var data = [
+      { name: 'Placa 1', g: 48.6, t: '2h 14min', mat: 'PLA Basic', color: '#1F2937', colorName: 'Preto' },
+      { name: 'Placa 2', g: 22.1, t: '1h 05min', mat: 'PLA Basic', color: '#F3F4F6', colorName: 'Branco' }
+    ];
+    var sel = this.state.plate;
+    var plates = data.map(function (p, i) {
+      var on = i === sel;
+      return {
+        name: p.name,
+        pick: function () { self.setState({ plate: i }); },
+        chipStyle: 'min-height: 44px; padding: 0 18px; border-radius: 999px; font: 600 14px IBM Plex Sans, sans-serif; cursor: pointer; ' +
+          (on ? 'background: #15191E; color: #FFFFFF; border: 1px solid #15191E' : 'background: #FFFFFF; color: #15191E; border: 1px solid #B8BFC8')
+      };
+    });
+    var plate = data[sel];
+    var kg = this.num(this.state.kg);
+    var bag = this.num(this.state.bag);
+    var m = this.num(this.state.margin);
+    var q = Math.max(1, Math.round(this.num(this.state.qty)) || 1);
+    var gPer = plate.g / q;
+    var fil = gPer / 1000 * kg;
+    var total = fil + bag;
+    var profit = total * m / 100;
+    return {
+      plates: plates,
+      plate: plate,
+      gramsLabel: plate.g.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' g',
+      gramsPerLabel: gPer.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' g',
+      kg: this.state.kg, bag: this.state.bag, margin: this.state.margin, qty: this.state.qty,
+      onKg: function (e) { self.setState({ kg: e.target.value }); },
+      onBag: function (e) { self.setState({ bag: e.target.value }); },
+      onMargin: function (e) { self.setState({ margin: e.target.value }); },
+      onQty: function (e) { self.setState({ qty: e.target.value }); },
+      filCost: this.brl(fil),
+      bagCost: this.brl(bag),
+      totalCost: this.brl(total),
+      marginLabel: m.toLocaleString('pt-BR') + '%',
+      profit: this.brl(profit),
+      price: this.brl(total + profit)
+    };
+  }
+}
+</script>
+</body>
+</html>

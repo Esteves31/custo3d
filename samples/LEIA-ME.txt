@@ -1,0 +1,2 @@
+Coloque aqui 1 ou 2 arquivos .gcode.3mf reais exportados do Bambu Studio
+(idealmente um com mais de uma placa) e, se tiver, um .3mf de projeto nao fatiado.
