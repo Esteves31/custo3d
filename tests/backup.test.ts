@@ -27,7 +27,7 @@ const quote = (overrides: Partial<NewQuote> = {}, when = new Date(2026, 9, 18, 1
     ...overrides,
   }, when)!;
 
-const VALUES = { kg: '120,00', bag: '0,35', ring: '0,40', hour: '0,50', profit: '100' };
+const VALUES = { kg: '120,00', bag: '0,35', ring: '0,40', pouch: '0,20', keyPouch: '0,15', led: '3,00', hour: '0,50', profit: '100' };
 
 /** Dados de exemplo: 2 cotações, 1 vendida e paga. */
 function seed() {
@@ -141,7 +141,15 @@ describe('backup', () => {
     expect(skipped).toBe(3);
     expect(backup.history.map((q) => q.id)).toContain(a.id);
     expect(backup.sales).toHaveLength(1);
-    expect(backup.values).toEqual({ kg: '', bag: '0,35', ring: '', hour: '', profit: '' });
+    expect(backup.values).toEqual({ kg: '', bag: '0,35', ring: '', pouch: '', keyPouch: '', led: '', hour: '', profit: '' });
+  });
+
+  it('backup antigo, sem os adicionais novos, preenche só o que tem', () => {
+    const data = JSON.parse(backupToJson(createBackup()));
+    data.values = { kg: '120,00', bag: '0,35', ring: '0,40', hour: '0,50', profit: '100' };
+    const { backup } = parseBackup(JSON.stringify(data));
+    expect(restoreBackup(backup)!.values).toBe(true);
+    expect(loadValues()).toEqual({ ...VALUES, pouch: '', keyPouch: '', led: '' });
   });
 
   it('nome do arquivo com a data', () => {

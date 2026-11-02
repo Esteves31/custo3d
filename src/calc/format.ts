@@ -53,6 +53,13 @@ export function formatBRLCompact(value: number): string {
   return brlCompact.format(value).replace(/\s/g, ' ');
 }
 
+const listFormat = new Intl.ListFormat('pt-BR', { type: 'conjunction' });
+
+/** "a" · "a e b" · "a, b e c" */
+export function formatList(items: string[]): string {
+  return listFormat.format(items);
+}
+
 export function formatPercent(value: number): string {
   return `${value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
 }

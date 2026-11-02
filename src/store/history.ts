@@ -1,4 +1,4 @@
-import { formatDateTime, formatDuration } from '../calc/format';
+import { formatDateTime, formatDuration, formatList } from '../calc/format';
 import { csvNumber, toCsv, type CsvColumn } from './csv';
 
 /** Uma cotação salva. Valores em R$ são por peça; o tempo é o da placa inteira. */
@@ -7,7 +7,10 @@ export type Quote = {
   /** Data/hora em ISO. */
   savedAt: string;
   fileName: string;
+  /** Com `plates`, é a primeira delas. */
   plate: number;
+  /** Só quando a cotação soma todas as placas do arquivo como uma peça só. */
+  plates?: number[];
   pieces: number;
   gramsPerPiece: number;
   plateSeconds: number | null;
@@ -15,6 +18,17 @@ export type Quote = {
   bagPrice: number;
   /** 0 quando a peça não leva argola. */
   ringPrice: number;
+  // Adicionais: 0 quando a peça não leva; ausentes nas cotações antigas.
+  /** Saquinho. */
+  pouchPrice?: number;
+  /** Saquinho de chaveiro. */
+  keyPouchPrice?: number;
+  /** Vela LED. */
+  ledPrice?: number;
+  /** Valor livre de "Outros". */
+  otherPrice?: number;
+  /** O que é o "Outros" (ex.: ímã); só quando preenchido. */
+  otherNote?: string;
   hourPrice: number;
   profitPct: number;
   filament: number;
@@ -35,6 +49,12 @@ const NUMBER_KEYS = [
   'profitPct', 'filament', 'time', 'cost', 'profit', 'price',
 ] as const satisfies readonly (keyof Quote)[];
 
+const OPTIONAL_NUMBER_KEYS = ['pouchPrice', 'keyPouchPrice', 'ledPrice', 'otherPrice'] as const satisfies readonly (keyof Quote)[];
+
+const isNumber = (value: unknown) => typeof value === 'number' && Number.isFinite(value);
+
+const isPlateList = (value: unknown) => Array.isArray(value) && value.length >= 2 && value.every(isNumber);
+
 export function isQuote(value: unknown): value is Quote {
   if (typeof value !== 'object' || value == null) return false;
   const q = value as Record<string, unknown>;
@@ -42,7 +62,15 @@ export function isQuote(value: unknown): value is Quote {
     && typeof q.savedAt === 'string'
     && typeof q.fileName === 'string'
     && (q.plateSeconds === null || typeof q.plateSeconds === 'number')
-    && NUMBER_KEYS.every((key) => typeof q[key] === 'number' && Number.isFinite(q[key]));
+    && (q.plates === undefined || isPlateList(q.plates))
+    && (q.otherNote === undefined || typeof q.otherNote === 'string')
+    && NUMBER_KEYS.every((key) => isNumber(q[key]))
+    && OPTIONAL_NUMBER_KEYS.every((key) => q[key] === undefined || isNumber(q[key]));
+}
+
+/** "1", ou "1 e 2" / "1, 2 e 3" quando a cotação junta as placas. */
+export function plateNumbers(q: Pick<Quote, 'plate' | 'plates'>): string {
+  return q.plates ? formatList(q.plates.map(String)) : String(q.plate);
 }
 
 /** Mais recentes primeiro. Entradas corrompidas são ignoradas. */
@@ -107,13 +135,18 @@ export function searchQuotes<T extends { fileName: string }>(list: T[], query: s
 /** Colunas da cotação, sem a data: o CSV dos vendidos usa as mesmas. */
 export const QUOTE_CSV_COLUMNS: CsvColumn<Quote>[] = [
   ['Arquivo', (q) => q.fileName],
-  ['Placa', (q) => String(q.plate)],
+  ['Placa', plateNumbers],
   ['Peças', (q) => String(q.pieces)],
   ['Gramas por peça', (q) => csvNumber(q.gramsPerPiece)],
   ['Tempo da placa', (q) => (q.plateSeconds == null ? '' : formatDuration(q.plateSeconds))],
   ['Filamento (R$ por kg)', (q) => csvNumber(q.pricePerKg)],
   ['Sacolinha', (q) => csvNumber(q.bagPrice)],
   ['Argola', (q) => csvNumber(q.ringPrice)],
+  ['Saquinho', (q) => csvNumber(q.pouchPrice ?? 0)],
+  ['Saquinho de chaveiro', (q) => csvNumber(q.keyPouchPrice ?? 0)],
+  ['Vela LED', (q) => csvNumber(q.ledPrice ?? 0)],
+  ['Outros', (q) => csvNumber(q.otherPrice ?? 0)],
+  ['Outros (o que é)', (q) => q.otherNote ?? ''],
   ['Tempo (R$ por hora)', (q) => csvNumber(q.hourPrice)],
   ['Custo do filamento', (q) => csvNumber(q.filament)],
   ['Custo do tempo', (q) => csvNumber(q.time)],

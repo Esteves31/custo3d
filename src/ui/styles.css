@@ -340,6 +340,15 @@ p { margin: 0; }
 }
 .check input { width: 20px; height: 20px; margin: 0; accent-color: var(--primary); cursor: pointer; }
 
+/* Adicionais: caixa à esquerda, preço à direita, uma linha por item. */
+.addons { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 16px; }
+.addons-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.addons-head h3 { margin: 0; }
+.addon { display: grid; grid-template-columns: minmax(0, 1fr) 128px; align-items: start; gap: 12px; }
+.addon .check { grid-column: auto; width: auto; min-height: 48px; }
+.addon .field input { height: 44px; }
+.addons .fields { margin-top: 6px; }
+
 /* ---------- Resultado ---------- */
 
 .result {

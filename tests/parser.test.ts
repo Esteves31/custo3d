@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mainFilament, parseFile, parseGcodeText, parseSlicedFile, readGcodeText, ParseError, NOT_SLICED_MESSAGE } from '../src/parser';
+import { combinePlates, mainFilament, parseFile, parseGcodeText, parseSlicedFile, readGcodeText, ParseError, NOT_SLICED_MESSAGE } from '../src/parser';
 import { parseDuration, parseGcodeHeader } from '../src/parser/gcodeHeader';
 import { parseProjectSettings, profileLabel } from '../src/parser/projectSettings';
 import { parseSliceInfo } from '../src/parser/sliceInfo';
@@ -124,6 +124,35 @@ describe('mainFilament', () => {
     const project = await parseSlicedFile(await fx.multiPlate(), 'x.gcode.3mf');
     expect(mainFilament(project.plates[1]!)?.type).toBe('PLA');
     expect(mainFilament({ index: 1, grams: 1, seconds: null, filaments: [] })).toBeUndefined();
+  });
+});
+
+describe('combinePlates', () => {
+  it('soma gramas, tempo e filamentos das placas', async () => {
+    const project = await parseSlicedFile(await fx.multiPlate(), 'x.gcode.3mf');
+    const all = combinePlates(project.plates);
+    expect(all.index).toBe(1);
+    expect(all.grams).toBeCloseTo(70.7, 6);
+    expect(all.seconds).toBe(11940);
+    expect(all.filaments.map((f) => [f.slot, f.type, f.grams])).toEqual([[1, 'PLA', 48.6], [2, 'PLA', 15], [3, 'PETG', 7.1]]);
+  });
+
+  it('soma as gramas do mesmo slot sem mexer nas placas originais', () => {
+    const pla = { slot: 1, type: 'PLA', color: '#000000', grams: 10 };
+    const plates = [
+      { index: 1, grams: 10, seconds: 600, filaments: [pla] },
+      { index: 2, grams: 5, seconds: 300, filaments: [{ ...pla, grams: 5 }] },
+    ];
+    expect(combinePlates(plates).filaments).toEqual([{ ...pla, grams: 15 }]);
+    expect(pla.grams).toBe(10);
+  });
+
+  it('fica sem tempo se alguma placa não tem tempo', () => {
+    const plates = [
+      { index: 1, grams: 10, seconds: 600, filaments: [] },
+      { index: 2, grams: 5, seconds: null, filaments: [] },
+    ];
+    expect(combinePlates(plates)).toMatchObject({ grams: 15, seconds: null });
   });
 });
 

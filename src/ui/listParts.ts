@@ -1,5 +1,5 @@
-import { formatDuration, formatGrams } from '../calc/format';
-import type { Quote } from '../store/history';
+import { formatDuration, formatGrams, formatList } from '../calc/format';
+import { plateNumbers, type Quote } from '../store/history';
 import { localDateKey } from '../store/sales';
 import { h } from './dom';
 
@@ -7,14 +7,27 @@ import { h } from './dom';
 
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** "Placa 1 · 4 peças · 12,15 g por peça · 2h 14min · com argola" */
+/** "argola, saquinho e ímã": os adicionais que a peça leva. */
+function addonNames(q: Quote): string[] {
+  const used: [price: number | undefined, name: string][] = [
+    [q.ringPrice, 'argola'],
+    [q.pouchPrice, 'saquinho'],
+    [q.keyPouchPrice, 'saquinho de chaveiro'],
+    [q.ledPrice, 'vela LED'],
+    [q.otherPrice, q.otherNote || 'outros'],
+  ];
+  return used.filter(([price]) => (price ?? 0) > 0).map(([, name]) => name);
+}
+
+/** "Placa 1 · 4 peças · 12,15 g por peça · 2h 14min · com argola e saquinho" (ou "Placas 1 e 2 · …") */
 export function quoteDetails(q: Quote): string {
+  const addons = addonNames(q);
   const parts = [
-    `Placa ${q.plate}`,
+    `${q.plates ? 'Placas' : 'Placa'} ${plateNumbers(q)}`,
     plural(q.pieces, 'peça', 'peças'),
     `${formatGrams(q.gramsPerPiece)} por peça`,
     q.plateSeconds != null && formatDuration(q.plateSeconds),
-    q.ringPrice > 0 && 'com argola',
+    addons.length > 0 && `com ${formatList(addons)}`,
   ];
   return parts.filter(Boolean).join(' · ');
 }

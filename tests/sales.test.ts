@@ -167,6 +167,6 @@ describe('itens vendidos', () => {
     const csv = salesToCsv(loadSales());
     expect(csv.startsWith('﻿Data da venda;Pago;Data da cotação;Arquivo;Placa;')).toBe(true);
     const line = csv.split('\r\n')[1]!;
-    expect(line).toBe('20/10/2026 15:30;Sim;18/10/2026 10:00;chaveiro_pikachu.gcode.3mf;1;4;12,15;2h 14min;120,00;0,35;0,40;0,50;1,46;0,28;2,49;100,00;2,49;1234,50');
+    expect(line).toBe('20/10/2026 15:30;Sim;18/10/2026 10:00;chaveiro_pikachu.gcode.3mf;1;4;12,15;2h 14min;120,00;0,35;0,40;0,00;0,00;0,00;0,00;;0,50;1,46;0,28;2,49;100,00;2,49;1234,50');
   });
 });

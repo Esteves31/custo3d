@@ -15,6 +15,8 @@ export type PriceInput = {
   bagPrice: number;
   /** Argola de chaveiro por peça; 0 ou ausente quando a peça não leva argola. */
   ringPrice?: number;
+  /** Outros adicionais por peça (saquinho, vela LED, outros...), já somados. */
+  extras?: number;
   /** R$ por hora de impressão da placa, dividido entre as peças. */
   hourPrice?: number;
   profitPct: number;
@@ -29,6 +31,7 @@ export type PriceBreakdown = {
   filament: number;
   bag: number;
   ring: number;
+  extras: number;
   time: number;
   energy: number;
   cost: number;
@@ -71,10 +74,11 @@ export function computePrice(input: PriceInput): PriceBreakdown {
   const time = ((input.hourPrice ?? 0) * hours) / pieces;
   const energy = input.energy ? (input.energy.watts * hours / 1000) * input.energy.kwhPrice / pieces : 0;
   const ring = input.ringPrice ?? 0;
+  const extras = input.extras ?? 0;
 
-  const cost = filament + input.bagPrice + ring + time + energy;
+  const cost = filament + input.bagPrice + ring + extras + time + energy;
   const profit = (cost * input.profitPct) / 100;
   const price = applyRounding(cost + profit, input.rounding);
 
-  return { gramsPerPiece, filament, bag: input.bagPrice, ring, time, energy, cost, profit, price };
+  return { gramsPerPiece, filament, bag: input.bagPrice, ring, extras, time, energy, cost, profit, price };
 }

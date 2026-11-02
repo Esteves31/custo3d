@@ -5,6 +5,7 @@ import { monthName } from '../src/calc/format';
 import { loadHistory } from '../src/store/history';
 import { loadSales, localDateKey, monthKey } from '../src/store/sales';
 import { startApp } from '../src/ui/app';
+import { multiPlate } from './fixtures';
 
 // G-code real: 18,05 g e 55min 33s (3333 s) numa placa.
 const SAMPLE = 'coaster_PLA_55m33s.gcode';
@@ -18,6 +19,15 @@ function type(id: string, value: string): void {
   input.value = value;
   input.dispatchEvent(new Event('input'));
 }
+
+function tick(id: string, checked = true): void {
+  const box = $<HTMLInputElement>(id);
+  box.checked = checked;
+  box.dispatchEvent(new Event('change'));
+}
+
+/** Linha do resultado de um adicional ("pouch" → linha do Saquinho). */
+const costRow = (id: string) => $(`${id}-cost`).closest<HTMLElement>('.row')!;
 
 async function open(file: File): Promise<void> {
   const input = $<HTMLInputElement>('file-input');
@@ -71,14 +81,73 @@ describe('calculadora', () => {
     ring.checked = true;
     ring.dispatchEvent(new Event('change'));
     expect(text('price')).toBe('—');
-    expect(text('result-note')).toBe('Preencha: Argola do chaveiro.');
+    expect(text('result-note')).toBe('Preencha: Argola de chaveiro.');
   });
 
   it('guarda os valores novos para a próxima vez', () => {
+    type('pouch', '0,20');
+    type('key-pouch', '0,15');
+    type('led', '3,00');
+    type('other', '1,00');
     document.body.innerHTML = '<div id="app"></div>';
     startApp($('app'));
     expect($<HTMLInputElement>('hour').value).toBe('0,50');
     expect($<HTMLInputElement>('ring').value).toBe('0,40');
+    expect(['pouch', 'key-pouch', 'led'].map((id) => $<HTMLInputElement>(id).value)).toEqual(['0,20', '0,15', '3,00']);
+    // Outros vale só para a peça: não fica salvo.
+    expect($<HTMLInputElement>('other').value).toBe('');
+  });
+
+  it('adicionais só somam quando marcados; Outros vazio vale zero', async () => {
+    type('pouch', '0,20');
+    type('key-pouch', '0,15');
+    type('led', '');
+    await open(sampleFile());
+    expect(text('price')).toBe('R$ 5,96');
+    for (const id of ['ring', 'pouch', 'key-pouch', 'led', 'other']) expect(costRow(id).hidden).toBe(true);
+
+    tick('pouch-on');
+    tick('led-on');
+    expect(text('result-note')).toBe('Preencha: Vela LED.');
+    type('led', '3');
+    // 2,9789 + saquinho 0,20 + vela LED 3,00
+    expect(text('pouch-cost')).toBe('R$ 0,20');
+    expect(text('led-cost')).toBe('R$ 3,00');
+    expect(costRow('pouch').hidden).toBe(false);
+    expect(costRow('key-pouch').hidden).toBe(true);
+    expect(text('total-cost')).toBe('R$ 6,18');
+    expect(text('price')).toBe('R$ 12,36');
+
+    type('other', 'abc');
+    expect(text('result-note')).toBe('Corrija o campo destacado.');
+    type('other', '1');
+    type('other-note', 'ímã');
+    expect(costRow('other').hidden).toBe(false);
+    expect(text('other-label')).toBe('Outros (ímã)');
+    expect(text('other-cost')).toBe('R$ 1,00');
+    expect(text('price')).toBe('R$ 14,36');
+
+    const save = $<HTMLButtonElement>('save');
+    save.click();
+    expect(loadHistory()[0]).toMatchObject({
+      ringPrice: 0, pouchPrice: 0.2, keyPouchPrice: 0, ledPrice: 3, otherPrice: 1, otherNote: 'ímã', price: 14.36,
+    });
+    // A descrição vai na cotação: mudar o texto deixa salvar de novo.
+    type('other-note', 'ímã forte');
+    expect(save.hasAttribute('aria-disabled')).toBe(false);
+
+    // Arquivo novo: nada marcado e Outros vazio; os preços salvos continuam.
+    await open(sampleFile());
+    expect(['ring-on', 'pouch-on', 'key-pouch-on', 'led-on'].map((id) => $<HTMLInputElement>(id).checked)).toEqual([false, false, false, false]);
+    expect($<HTMLInputElement>('other').value).toBe('');
+    expect($<HTMLInputElement>('other-note').value).toBe('');
+    expect($<HTMLInputElement>('pouch').value).toBe('0,20');
+    expect(text('price')).toBe('R$ 5,96');
+
+    location.hash = '#historico';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    expect(document.querySelector('#view-history .quote-detail')!.textContent)
+      .toBe('Placa 1 · 1 peça · 18,05 g por peça · 55min 33s · com saquinho, vela LED e ímã');
   });
 
   it('salva no histórico uma vez por cotação e mostra na aba', async () => {
@@ -112,6 +181,66 @@ describe('calculadora', () => {
     expect(text('nav-count')).toBe('1');
     // A cotação de 2 peças (na tela) foi excluída: dá para salvar de novo.
     expect(save.hasAttribute('aria-disabled')).toBe(false);
+  });
+
+  it('"Todas juntas" soma as placas e cobra sacolinha uma vez só', async () => {
+    const plate = (choice: string) => document.querySelector<HTMLButtonElement>(`[data-plate="${choice}"]`)!;
+    const stats = () => Array.from(document.querySelectorAll('#project .stat-number'), (el) => el.textContent);
+    const piecesLabel = () => document.querySelector('label[for="pieces"]')!.textContent;
+
+    // Placa 1: 48,6 g e 2h 14min · Placa 2: 22,1 g e 1h 5min
+    await open(new File([new Uint8Array(await multiPlate())], 'robo.gcode.3mf'));
+    expect(document.querySelectorAll('.plates .chip')).toHaveLength(3);
+    expect(text('price')).toBe('R$ 14,60');
+    type('pieces', '3');
+    tick('ring-on');
+    type('pouch', '0,20');
+    tick('pouch-on');
+    type('other', '0,50');
+
+    plate('all').click();
+    expect(plate('all').getAttribute('aria-pressed')).toBe('true');
+    expect(stats()).toEqual(['70,7 g', '3h 19min']);
+    expect(piecesLabel()).toBe('Peças (todas as placas juntas)');
+    // Peças, adicionais e Outros da Placa 1 não vêm junto.
+    expect($<HTMLInputElement>('pieces').value).toBe('1');
+    expect($<HTMLInputElement>('ring-on').checked).toBe(false);
+    expect($<HTMLInputElement>('pouch-on').checked).toBe(false);
+    expect($<HTMLInputElement>('other').value).toBe('');
+    // 70,7 g × R$ 0,12 = 8,484 · 3,3167 h × R$ 0,50 = 1,6583 · + uma sacolinha 0,35
+    expect(text('total-cost')).toBe('R$ 10,49');
+    expect(text('price')).toBe('R$ 20,98');
+
+    $<HTMLButtonElement>('save').click();
+    expect(loadHistory()).toHaveLength(1);
+    expect(loadHistory()[0]).toMatchObject({ plate: 1, plates: [1, 2], pieces: 1, price: 20.98 });
+
+    type('pieces', '2');
+    expect(text('res-pieces')).toBe('2 peças nas placas juntas');
+    expect(text('price')).toBe('R$ 10,84');
+    type('pieces', '');
+    expect(text('result-note')).toBe('Preencha: Peças (todas as placas juntas).');
+    type('pieces', '2');
+
+    // Volta para a Placa 1 com as peças, os adicionais e o Outros dela.
+    plate('0').click();
+    expect(piecesLabel()).toBe('Peças nesta placa');
+    expect($<HTMLInputElement>('pieces').value).toBe('3');
+    expect($<HTMLInputElement>('ring-on').checked).toBe(true);
+    expect($<HTMLInputElement>('pouch-on').checked).toBe(true);
+    expect($<HTMLInputElement>('other').value).toBe('0,50');
+    plate('all').click();
+    expect($<HTMLInputElement>('pieces').value).toBe('2');
+
+    location.hash = '#historico';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    expect(document.querySelector('#view-history .quote-detail')!.textContent).toBe('Placas 1 e 2 · 1 peça · 70,7 g por peça · 3h 19min');
+  });
+
+  it('arquivo de uma placa não mostra "Todas juntas"', async () => {
+    await open(sampleFile());
+    expect(document.querySelectorAll('.plates .chip')).toHaveLength(1);
+    expect(document.querySelector('[data-plate="all"]')).toBeNull();
   });
 });
 

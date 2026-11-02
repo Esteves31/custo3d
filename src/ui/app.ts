@@ -6,18 +6,39 @@ import { addQuote, type NewQuote } from '../store/history';
 import { loadValues, saveValues, type SavedValues } from '../store/settings';
 import { byId, ICONS } from './dom';
 import { mountHistory } from './historyView';
-import { renderPanel, type PanelActions, type PanelState } from './projectPanel';
+import { renderPanel, selectedPlate, type PanelActions, type PanelState, type PlateChoice } from './projectPanel';
 import { mountSales } from './salesView';
 import { mountSummary } from './summaryView';
 
 // Configurável na Fase 4 (Padrões).
 const ROUNDING: Rounding = 'none';
 
-const field = (id: string, label: string, placeholder: string, inputmode: string) => `
+const PIECES_LABEL = { one: 'Peças nesta placa', all: 'Peças (todas as placas juntas)' };
+
+type AddonKey = 'ring' | 'pouch' | 'keyPouch' | 'led';
+
+/**
+ * Adicionais com preço salvo em "Seus valores" e uma caixa por peça: só somam quando marcados.
+ * `key` é a chave em SavedValues; `id` é o do campo de preço (a caixa é `${id}-on`).
+ */
+const ADDONS: readonly { key: AddonKey; id: string; name: string; short: string; placeholder: string }[] = [
+  { key: 'ring', id: 'ring', name: 'Argola de chaveiro', short: 'Argola', placeholder: 'ex.: 0,40' },
+  { key: 'pouch', id: 'pouch', name: 'Saquinho', short: 'Saquinho', placeholder: 'ex.: 0,20' },
+  { key: 'keyPouch', id: 'key-pouch', name: 'Saquinho de chaveiro', short: 'Saquinho de chaveiro', placeholder: 'ex.: 0,15' },
+  { key: 'led', id: 'led', name: 'Vela LED', short: 'Vela LED', placeholder: 'ex.: 3,00' },
+];
+
+const field = (id: string, label: string, placeholder: string, inputmode: string, labelClass = '') => `
   <div class="field">
-    <label for="${id}">${label}</label>
+    <label for="${id}"${labelClass && ` class="${labelClass}"`}>${label}</label>
     <input id="${id}" type="text" inputmode="${inputmode}" autocomplete="off" spellcheck="false" placeholder="${placeholder}" aria-describedby="${id}-error">
     <p class="field-error" id="${id}-error" hidden></p>
+  </div>`;
+
+const addonRow = (a: (typeof ADDONS)[number]) => `
+  <div class="addon">
+    <label class="check"><input type="checkbox" id="${a.id}-on"><span>${a.name}</span></label>
+    ${field(a.id, `${a.name} (R$ por unidade)`, a.placeholder, 'decimal', 'sr-only')}
   </div>`;
 
 const row = (labelId: string, label: string, valueId: string, extra = '') => `
@@ -44,12 +65,24 @@ const SHELL = `
         ${field('kg', 'Filamento (R$ por kg)', 'ex.: 120,00', 'decimal')}
         ${field('bag', 'Sacolinha (R$ por unidade)', 'ex.: 0,35', 'decimal')}
         ${field('hour', 'Tempo de impressão (R$ por hora)', 'ex.: 0,50', 'decimal')}
-        ${field('ring', 'Argola do chaveiro (R$ por unidade)', 'ex.: 0,40', 'decimal')}
         ${field('profit', 'Lucro sobre o custo (%)', 'ex.: 150', 'decimal')}
-        ${field('pieces', 'Peças nesta placa', '1', 'numeric')}
-        <label class="check"><input type="checkbox" id="ring-on"><span>Leva argola de chaveiro</span></label>
+        ${field('pieces', PIECES_LABEL.one, '1', 'numeric')}
       </div>
-      <p class="muted small">Os valores ficam salvos e já vêm preenchidos no próximo projeto. Peças e argola valem só para a placa aberta.</p>
+      <div class="addons" role="group" aria-labelledby="addons-title">
+        <div class="addons-head">
+          <h3 id="addons-title" class="field-label">Adicionais</h3>
+          <span class="muted small">R$ por unidade</span>
+        </div>
+        ${ADDONS.map(addonRow).join('')}
+        <div class="fields">
+          ${field('other', 'Outros (R$ por peça)', 'ex.: 1,00', 'decimal')}
+          <div class="field">
+            <label for="other-note">O que é (opcional)</label>
+            <input id="other-note" type="text" autocomplete="off" maxlength="40" placeholder="ex.: ímã">
+          </div>
+        </div>
+      </div>
+      <p class="muted small">Os valores ficam salvos e já vêm preenchidos no próximo projeto. Peças, adicionais marcados e Outros valem só para a placa escolhida.</p>
     </section>
     <section class="result" aria-labelledby="res-title">
       <div class="result-head">
@@ -59,7 +92,8 @@ const SHELL = `
       <dl class="breakdown">
         ${row('fil-label', 'Filamento', 'fil-cost')}
         ${row('bag-label', 'Sacolinha', 'bag-cost')}
-        ${row('ring-label', 'Argola', 'ring-cost')}
+        ${ADDONS.map((a) => row(`${a.id}-label`, a.short, `${a.id}-cost`)).join('')}
+        ${row('other-label', 'Outros', 'other-cost')}
         ${row('time-label', 'Tempo de impressão', 'time-cost')}
         ${row('total-label', 'Custo total', 'total-cost', ' total')}
         ${row('profit-label', 'Lucro', 'profit-value', ' profit')}
@@ -140,15 +174,16 @@ export function startApp(root: HTMLElement): void {
   const overlay = byId('drop-overlay');
   const copyButton = byId<HTMLButtonElement>('copy');
   const saveButton = byId<HTMLButtonElement>('save');
-  const ringCheck = byId<HTMLInputElement>('ring-on');
+  const otherNote = byId<HTMLInputElement>('other-note');
   const live = byId('live');
   const out = {
     pieces: byId('res-pieces'),
     filLabel: byId('fil-label'),
     filCost: byId('fil-cost'),
     bagCost: byId('bag-cost'),
-    ringRow: byId('ring-cost').closest<HTMLElement>('.row')!,
-    ringCost: byId('ring-cost'),
+    otherRow: byId('other-cost').closest<HTMLElement>('.row')!,
+    otherLabel: byId('other-label'),
+    otherCost: byId('other-cost'),
     timeLabel: byId('time-label'),
     timeCost: byId('time-cost'),
     totalCost: byId('total-cost'),
@@ -162,26 +197,54 @@ export function startApp(root: HTMLElement): void {
     kg: makeField('kg', 'money', 'Filamento (R$ por kg)'),
     bag: makeField('bag', 'money', 'Sacolinha'),
     hour: makeField('hour', 'money', 'Tempo (R$ por hora)'),
-    ring: makeField('ring', 'money', 'Argola do chaveiro'),
     profit: makeField('profit', 'percent', 'Lucro'),
-    pieces: makeField('pieces', 'integer', 'Peças nesta placa'),
+    pieces: makeField('pieces', 'integer', PIECES_LABEL.one),
+    other: makeField('other', 'money', 'Outros'),
   };
-  const savedKeys = ['kg', 'bag', 'hour', 'ring', 'profit'] as const satisfies readonly (keyof SavedValues)[];
+  const addons = ADDONS.map((a) => ({
+    ...a,
+    field: makeField(a.id, 'money', a.name),
+    check: byId<HTMLInputElement>(`${a.id}-on`),
+    row: byId(`${a.id}-cost`).closest<HTMLElement>('.row')!,
+    cost: byId(`${a.id}-cost`),
+  }));
+  const allFields = [...Object.values(fields), ...addons.map((a) => a.field)];
+  const piecesLabel = document.querySelector<HTMLLabelElement>('label[for="pieces"]')!;
+  /** Campos que ficam salvos para o próximo projeto. */
+  const savedFields: [keyof SavedValues, Field][] = [
+    ['kg', fields.kg], ['bag', fields.bag], ['hour', fields.hour], ['profit', fields.profit],
+    ...addons.map((a): [keyof SavedValues, Field] => [a.key, a.field]),
+  ];
+
+  /** O que vale só para a placa escolhida (ou para "Todas juntas"). */
+  type PlateInputs = { pieces: string; checked: AddonKey[]; other: string; otherNote: string };
+  const freshInputs = (): PlateInputs => ({ pieces: '1', checked: [], other: '', otherNote: '' });
+  const readInputs = (): PlateInputs => ({
+    pieces: fields.pieces.input.value,
+    checked: addons.filter((a) => a.check.checked).map((a) => a.key),
+    other: fields.other.input.value,
+    otherNote: otherNote.value,
+  });
+  function writeInputs(v: PlateInputs): void {
+    fields.pieces.input.value = v.pieces;
+    for (const a of addons) a.check.checked = v.checked.includes(a.key);
+    fields.other.input.value = v.other;
+    otherNote.value = v.otherNote;
+  }
 
   const saved = loadValues();
-  for (const key of savedKeys) fields[key].input.value = saved[key];
-  fields.pieces.input.value = '1';
+  for (const [key, f] of savedFields) f.input.value = saved[key];
+  writeInputs(freshInputs());
 
   let state: PanelState = { kind: 'empty' };
-  let piecesByPlate = new Map<number, string>();
-  let ringByPlate = new Map<number, boolean>();
+  let inputsByPlate = new Map<PlateChoice, PlateInputs>();
   let priceText: string | null = null;
   let loadToken = 0;
   /** Cotação na tela, pronta para salvar; e a última salva (para não salvar a mesma duas vezes). */
   let quote: NewQuote | null = null;
   let savedQuote: { id: string; signature: string } | null = null;
 
-  const currentPlate = () => (state.kind === 'ready' ? state.project.plates[state.plateIdx]! : null);
+  const currentPlate = () => (state.kind === 'ready' ? selectedPlate(state.project, state.plateIdx) : null);
 
   const historyView = mountHistory(byId('view-history'), {
     onChange: (list) => {
@@ -206,7 +269,7 @@ export function startApp(root: HTMLElement): void {
       salesView.refresh();
       // O backup só preenche campos vazios; o que já está digitado continua.
       const restored = loadValues();
-      for (const key of savedKeys) if (!fields[key].input.value.trim()) fields[key].input.value = restored[key];
+      for (const [key, f] of savedFields) if (!f.input.value.trim()) f.input.value = restored[key];
       recalc();
     },
   });
@@ -215,9 +278,9 @@ export function startApp(root: HTMLElement): void {
     openPicker: () => fileInput.click(),
     pickPlate: (plateIdx) => {
       if (state.kind !== 'ready' || plateIdx === state.plateIdx) return;
+      inputsByPlate.set(state.plateIdx, readInputs());
       state = { ...state, plateIdx };
-      fields.pieces.input.value = piecesByPlate.get(currentPlate()!.index) ?? '1';
-      ringCheck.checked = ringByPlate.get(currentPlate()!.index) ?? false;
+      writeInputs(inputsByPlate.get(plateIdx) ?? freshInputs());
       show();
       panel.querySelector<HTMLButtonElement>(`[data-plate="${plateIdx}"]`)?.focus();
     },
@@ -225,6 +288,10 @@ export function startApp(root: HTMLElement): void {
 
   function show(): void {
     renderPanel(panel, state, actions);
+    // O rótulo também entra no aviso "Preencha: …".
+    const label = state.kind === 'ready' && state.plateIdx === 'all' ? PIECES_LABEL.all : PIECES_LABEL.one;
+    piecesLabel.textContent = label;
+    fields.pieces.label = label;
     recalc();
   }
 
@@ -242,8 +309,11 @@ export function startApp(root: HTMLElement): void {
     out.filLabel.textContent = 'Filamento';
     out.timeLabel.textContent = 'Tempo de impressão';
     out.profitLabel.textContent = 'Lucro';
-    out.ringRow.hidden = !ringCheck.checked;
-    for (const el of [out.filCost, out.bagCost, out.ringCost, out.timeCost, out.totalCost, out.profit, out.price]) el.textContent = '—';
+    out.otherLabel.textContent = 'Outros';
+    for (const a of addons) a.row.hidden = !a.check.checked;
+    out.otherRow.hidden = !fields.other.input.value.trim();
+    const costs = [out.filCost, out.bagCost, ...addons.map((a) => a.cost), out.otherCost, out.timeCost, out.totalCost, out.profit, out.price];
+    for (const el of costs) el.textContent = '—';
     out.note.textContent = note;
     out.note.hidden = false;
     out.price.classList.add('is-empty');
@@ -254,12 +324,12 @@ export function startApp(root: HTMLElement): void {
   }
 
   function recalc(): void {
-    for (const f of Object.values(fields)) check(f);
+    for (const f of allFields) check(f);
     const plate = currentPlate();
-    const withRing = ringCheck.checked;
-    // Sem a caixa marcada, o preço da argola não entra na conta e não precisa estar preenchido.
-    const needed = Object.values(fields).filter((f) => f !== fields.ring || withRing);
-    const invalid = needed.filter((f) => f.result.status === 'invalid');
+    const used = addons.filter((a) => a.check.checked);
+    // Adicional desmarcado não entra na conta e o preço dele não precisa estar preenchido. Outros vazio vale zero.
+    const needed = [fields.kg, fields.bag, fields.hour, fields.profit, fields.pieces, ...used.map((a) => a.field)];
+    const invalid = [...needed, fields.other].filter((f) => f.result.status === 'invalid');
     const empty = needed.filter((f) => f.result.status === 'empty');
 
     if (state.kind !== 'ready' || !plate) return clearResult('Abra um arquivo fatiado para ver o preço.');
@@ -267,22 +337,36 @@ export function startApp(root: HTMLElement): void {
     if (empty.length) return clearResult(`Preencha: ${empty.map((f) => f.label).join(', ')}.`);
 
     const value = (f: Field) => (f.result.status === 'ok' ? f.result.value : 0);
+    const priceOf = (key: AddonKey) => {
+      const addon = used.find((a) => a.key === key);
+      return addon ? value(addon.field) : 0;
+    };
     const pieces = value(fields.pieces);
+    const other = value(fields.other);
+    const note = otherNote.value.trim();
     const input = {
       pricePerKg: value(fields.kg),
       bagPrice: value(fields.bag),
-      ringPrice: withRing ? value(fields.ring) : 0,
+      ringPrice: priceOf('ring'),
       hourPrice: value(fields.hour),
       profitPct: value(fields.profit),
     };
-    const r = computePrice({ ...input, plateGrams: plate.grams, pieces, rounding: ROUNDING, plateSeconds: plate.seconds });
+    const addonPrices = { pouchPrice: priceOf('pouch'), keyPouchPrice: priceOf('keyPouch'), ledPrice: priceOf('led'), otherPrice: other };
+    const extras = addonPrices.pouchPrice + addonPrices.keyPouchPrice + addonPrices.ledPrice + other;
+    const r = computePrice({ ...input, extras, plateGrams: plate.grams, pieces, rounding: ROUNDING, plateSeconds: plate.seconds });
 
-    out.pieces.textContent = pieces > 1 ? `${pieces} peças na placa` : '';
+    const allPlates = state.plateIdx === 'all';
+    out.pieces.textContent = pieces > 1 ? `${pieces} peças ${allPlates ? 'nas placas juntas' : 'na placa'}` : '';
     out.filLabel.textContent = `Filamento (${formatGrams(r.gramsPerPiece)})`;
     out.filCost.textContent = formatBRL(r.filament);
     out.bagCost.textContent = formatBRL(r.bag);
-    out.ringRow.hidden = !withRing;
-    out.ringCost.textContent = formatBRL(r.ring);
+    for (const a of addons) {
+      a.row.hidden = !a.check.checked;
+      a.cost.textContent = formatBRL(priceOf(a.key));
+    }
+    out.otherRow.hidden = other <= 0;
+    out.otherLabel.textContent = note ? `Outros (${note})` : 'Outros';
+    out.otherCost.textContent = formatBRL(other);
     // Tempo por peça, como as gramas: a placa inteira dividida pelas peças.
     out.timeLabel.textContent = plate.seconds ? `Tempo (${formatDuration(plate.seconds / pieces)})` : 'Tempo (o arquivo não informa)';
     out.timeCost.textContent = formatBRL(r.time);
@@ -299,8 +383,11 @@ export function startApp(root: HTMLElement): void {
 
     quote = {
       ...input,
+      ...addonPrices,
+      ...(note && other > 0 ? { otherNote: note } : {}),
       fileName: state.project.fileName,
       plate: plate.index,
+      ...(allPlates ? { plates: state.project.plates.map((p) => p.index) } : {}),
       pieces,
       gramsPerPiece: r.gramsPerPiece,
       plateSeconds: plate.seconds,
@@ -315,18 +402,14 @@ export function startApp(root: HTMLElement): void {
 
   function persist(): void {
     const next = loadValues();
-    for (const key of savedKeys) {
-      if (fields[key].result.status !== 'invalid') next[key] = fields[key].input.value.trim();
+    for (const [key, f] of savedFields) {
+      if (f.result.status !== 'invalid') next[key] = f.input.value.trim();
     }
     saveValues(next);
   }
 
-  for (const f of Object.values(fields)) {
+  for (const f of allFields) {
     f.input.addEventListener('input', () => {
-      if (f === fields.pieces) {
-        const plate = currentPlate();
-        if (plate) piecesByPlate.set(plate.index, f.input.value);
-      }
       recalc();
       persist();
     });
@@ -342,11 +425,9 @@ export function startApp(root: HTMLElement): void {
     });
   }
 
-  ringCheck.addEventListener('change', () => {
-    const plate = currentPlate();
-    if (plate) ringByPlate.set(plate.index, ringCheck.checked);
-    recalc();
-  });
+  for (const a of addons) a.check.addEventListener('change', recalc);
+  // A descrição vai junto na cotação: mudar o texto permite salvar de novo.
+  otherNote.addEventListener('input', recalc);
 
   copyButton.addEventListener('click', async () => {
     if (!priceText) return;
@@ -416,11 +497,9 @@ export function startApp(root: HTMLElement): void {
       const project = await parseFile(file, file.name);
       if (token !== loadToken) return;
       state = { kind: 'ready', project, plateIdx: 0, loadedAt: new Date() };
-      piecesByPlate = new Map();
-      fields.pieces.input.value = '1';
-      // Arquivo novo começa sem argola: evita somar argola num porta-copos depois de um chaveiro.
-      ringByPlate = new Map();
-      ringCheck.checked = false;
+      // Arquivo novo começa sem adicionais e sem Outros: evita somar argola num porta-copos depois de um chaveiro.
+      inputsByPlate = new Map();
+      writeInputs(freshInputs());
       savedQuote = null;
       live.textContent = `${file.name} carregado.`;
     } catch (e) {

@@ -98,9 +98,10 @@ Todas as funções de cálculo são puras, ficam em `src/calc/` e têm testes.
 gramasPorPeca = gramasDaPlaca / pecasNaPlaca          (pecasNaPlaca >= 1, inteiro)
 filamento     = gramasPorPeca / 1000 * precoKg
 tempo         = precoHora * horasDaPlaca / pecasNaPlaca                   (sem tempo no arquivo: 0)
-argola        = precoArgola                                           (só com "Leva argola" marcado; senão 0)
+argola        = precoArgola                                           (só com a caixa marcada; senão 0)
+extras        = saquinho + saquinhoChaveiro + velaLed + outros       (cada um só com a caixa marcada; outros: valor livre, vazio = 0)
 energia       = (watts * horasDaPlaca / 1000 * tarifaKwh) / pecasNaPlaca   (só se ativado; senão 0)
-custo         = filamento + sacolinha + argola + tempo + energia
+custo         = filamento + sacolinha + argola + extras + tempo + energia
 lucro         = custo * lucroPct / 100                 (markup sobre o custo)
 preco         = arredondar(custo + lucro)
 ```
@@ -168,6 +169,8 @@ preco         = arredondar(custo + lucro)
 > Feito: aba "Histórico" (`#historico`), últimas 500 cotações no `localStorage`.
 
 - "Salvar no histórico" guarda data, arquivo, placa, peças, gramas, custo, lucro% e preço.
+- **Adicionais** (feito): lista "Adicionais" abaixo de "Seus valores", com caixa + preço por linha: argola de chaveiro, saquinho, saquinho de chaveiro e vela LED (lista `ADDONS` em `src/ui/app.ts`). Preços salvos (`ring`, `pouch`, `keyPouch`, `led`); caixas valem por placa e desmarcam em arquivo novo. "Outros": valor livre por peça + "O que é" opcional, não fica salvo. A cotação leva `pouchPrice`, `keyPouchPrice`, `ledPrice`, `otherPrice` (0 quando não leva) e `otherNote`; todos opcionais para cotações antigas. CSV ganhou as colunas Saquinho, Saquinho de chaveiro, Vela LED, Outros e Outros (o que é). Pode virar o cadastro de "Embalagens" da Fase 4.
+- **Todas juntas** (feito): arquivo com 2+ placas ganha o chip "Todas juntas" no seletor de placa. Soma gramas, tempo e filamentos (por slot) de todas as placas (`combinePlates`) e calcula como uma placa só, então sacolinha e argola entram uma vez por peça. O campo vira "Peças (todas as placas juntas)". Se alguma placa não tiver tempo, o total fica sem tempo. A cotação salva leva `plates: [1, 2, …]` (opcional; `plate` fica com a primeira) e aparece como "Placas 1 e 2"; no CSV, coluna Placa = `1 e 2`. Backup continua na versão 1.
 - Lista com busca simples e botão de excluir.
 - Botão "Exportar CSV" com `;` como separador e vírgula decimal, para abrir direto no Excel em pt-BR.
 

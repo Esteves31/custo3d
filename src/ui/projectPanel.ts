@@ -1,18 +1,25 @@
 import { colorName } from '../calc/color';
 import { formatDuration, formatGrams } from '../calc/format';
-import type { Filament, Plate, SlicedProject } from '../parser';
+import { combinePlates, type Filament, type Plate, type SlicedProject } from '../parser';
 import { h, icon, ICONS } from './dom';
+
+/** Posição da placa em `project.plates`, ou 'all' para todas juntas como uma peça só. */
+export type PlateChoice = number | 'all';
 
 export type PanelState =
   | { kind: 'empty' }
   | { kind: 'loading'; fileName: string }
   | { kind: 'error'; fileName: string; message: string; notSliced: boolean }
-  | { kind: 'ready'; project: SlicedProject; plateIdx: number; loadedAt: Date };
+  | { kind: 'ready'; project: SlicedProject; plateIdx: PlateChoice; loadedAt: Date };
 
 export type PanelActions = {
   openPicker: () => void;
-  pickPlate: (plateIdx: number) => void;
+  pickPlate: (plateIdx: PlateChoice) => void;
 };
+
+export function selectedPlate(project: SlicedProject, plateIdx: PlateChoice): Plate {
+  return plateIdx === 'all' ? combinePlates(project.plates) : project.plates[plateIdx]!;
+}
 
 const EXPORT_PATH = 'Arquivo › Exportar › Exportar arquivo fatiado da placa';
 
@@ -64,7 +71,7 @@ function errorAlert(state: Extract<PanelState, { kind: 'error' }>): HTMLElement 
 
 function projectView(state: Extract<PanelState, { kind: 'ready' }>, actions: PanelActions): HTMLElement[] {
   const { project, plateIdx, loadedAt } = state;
-  const plate = project.plates[plateIdx]!;
+  const plate = selectedPlate(project, plateIdx);
   const time = loadedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const count = project.plates.length;
 
@@ -77,20 +84,25 @@ function projectView(state: Extract<PanelState, { kind: 'ready' }>, actions: Pan
     h('span', { class: 'badge-ok' }, 'Fatiado'),
   );
 
+  const chip = (choice: PlateChoice, label: string) =>
+    h('button', {
+      type: 'button',
+      class: 'chip',
+      'aria-pressed': choice === plateIdx ? 'true' : 'false',
+      'data-plate': choice,
+      onclick: () => actions.pickPlate(choice),
+    }, label);
+
   const plates = h('div', { class: 'plates', role: 'group', 'aria-labelledby': 'plates-label' },
     h('span', { id: 'plates-label', class: 'field-label' }, count > 1 ? `Placa (${count} no arquivo)` : 'Placa'),
     h('div', { class: 'chips' },
-      ...project.plates.map((p, i) =>
-        h('button', {
-          type: 'button',
-          class: 'chip',
-          'aria-pressed': i === plateIdx ? 'true' : 'false',
-          'data-plate': i,
-          onclick: () => actions.pickPlate(i),
-        }, `Placa ${p.index}`),
-      ),
+      ...project.plates.map((p, i) => chip(i, `Placa ${p.index}`)),
+      ...(count > 1 ? [chip('all', 'Todas juntas')] : []),
     ),
   );
+  if (plateIdx === 'all') {
+    plates.append(h('p', { class: 'muted small' }, `Soma das ${count} placas, para quando elas formam a mesma peça.`));
+  }
 
   const stats = h('div', { class: 'stats' },
     tile('Filamento usado', h('span', { class: 'stat-number' }, formatGrams(plate.grams))),

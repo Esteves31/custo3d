@@ -61,6 +61,28 @@ export function mainFilament(plate: Plate): Filament | undefined {
   return plate.filaments.reduce<Filament | undefined>((best, f) => (!best || f.grams > best.grams ? f : best), undefined);
 }
 
+/**
+ * Soma as placas como se fossem uma só (várias placas que formam a mesma peça).
+ * Filamentos do mesmo slot somam as gramas. Se alguma placa não tem tempo, o total fica sem tempo.
+ */
+export function combinePlates(plates: Plate[]): Plate {
+  const bySlot = new Map<number, Filament>();
+  for (const plate of plates) {
+    for (const f of plate.filaments) {
+      const seen = bySlot.get(f.slot);
+      if (seen) seen.grams += f.grams;
+      else bySlot.set(f.slot, { ...f });
+    }
+  }
+  const missingTime = plates.some((p) => p.seconds == null);
+  return {
+    index: plates[0]?.index ?? 1,
+    grams: plates.reduce((sum, p) => sum + p.grams, 0),
+    seconds: missingTime ? null : plates.reduce((sum, p) => sum + p.seconds!, 0),
+    filaments: [...bySlot.values()].sort((a, b) => a.slot - b.slot),
+  };
+}
+
 /** Preenche nome do perfil e R$/kg (por slot) nos filamentos e no projeto. */
 function withSlotInfo(project: SlicedProject, { costs, profiles }: SlotSettings): SlicedProject {
   for (const plate of project.plates) {

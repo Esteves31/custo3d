@@ -56,6 +56,15 @@ describe('computePrice — casos obrigatórios do plano', () => {
     expect(formatBRL(four.price)).toBe('R$ 4,97');
   });
 
+  it('soma os outros adicionais por peça, sem dividir, e cobra lucro sobre eles', () => {
+    const base = { plateGrams: 48.6, pricePerKg: 120, bagPrice: 0.35, profitPct: 100, rounding: 'none' as const };
+    const r = computePrice({ ...base, pieces: 4, extras: 3.2 }); // saquinho 0,20 + vela LED 3,00
+    expect(r.extras).toBe(3.2);
+    expect(formatBRL(r.cost)).toBe('R$ 5,01'); // 1,458 + 0,35 + 3,20
+    expect(formatBRL(r.price)).toBe('R$ 10,02');
+    expect(computePrice({ ...base, pieces: 4 }).extras).toBe(0);
+  });
+
   it('sem tempo no arquivo, o preço da hora não soma nada', () => {
     const r = computePrice({ plateGrams: 0, pieces: 1, pricePerKg: 0, bagPrice: 0, hourPrice: 0.5, plateSeconds: null, profitPct: 0, rounding: 'none' });
     expect(r.time).toBe(0);

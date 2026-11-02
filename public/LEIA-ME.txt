@@ -8,8 +8,10 @@ COMO USAR
 
 2. O Custo3D abre na aba "Resumo". Clique em "Calculadora", no alto da
    janela. Em "Seus valores", digite o preço do kg do filamento, o preço da
-   sacolinha, o preço da hora de impressão, o preço da argola de chaveiro
-   e a % de lucro. Esses valores ficam salvos para a próxima vez.
+   sacolinha, o preço da hora de impressão e a % de lucro. Em
+   "Adicionais", digite o preço de cada um: argola de chaveiro, saquinho,
+   saquinho de chaveiro e vela LED. Esses valores ficam salvos para a
+   próxima vez.
 
 3. No Bambu Studio, depois de fatiar, use
    Arquivo > Exportar > Exportar arquivo fatiado da placa
@@ -24,8 +26,17 @@ COMO USAR
 4. Arraste esse arquivo para a janela do Custo3D (ou clique em "Abrir arquivo").
 
 5. Se a placa tiver mais de uma peça, informe em "Peças nesta placa".
-   Se a peça for chaveiro, marque "Leva argola de chaveiro". Essa caixa
-   se desmarca sozinha quando você abre outro arquivo.
+   Em "Adicionais", marque o que a peça leva (ex.: argola e saquinho de
+   chaveiro num chaveiro, vela LED numa luminária). Só o que estiver
+   marcado entra no preço. Para qualquer outro custo, use "Outros": o
+   valor por peça e, se quiser, o que é (ex.: ímã). As caixas e o
+   "Outros" se limpam sozinhos quando você abre outro arquivo.
+
+   Arquivo com várias placas que formam a MESMA peça (ex.: corpo na
+   placa 1 e cabeça na placa 2): clique em "Todas juntas", ao lado dos
+   botões das placas. O preço soma as placas e cobra a sacolinha e a
+   argola uma vez só. Em "Peças (todas as placas juntas)", informe
+   quantas peças prontas saem do conjunto.
 
 6. Clique em "Copiar preço" e cole o valor onde quiser.
 
